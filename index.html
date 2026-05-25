@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontrol LED ESP32 (Direct)</title>
+    <!-- Library Paho MQTT untuk JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin-top: 10vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: inline-block;
+        }
+        button {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            border: none;
+            transition: 0.3s;
+        }
+        .btn-on { background-color: #28a745; color: white; }
+        .btn-on:hover { background-color: #218838; }
+        .btn-off { background-color: #dc3545; color: white; }
+        .btn-off:hover { background-color: #c82333; }
+        #status { margin-top: 20px; font-weight: bold; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Kontrol LED Jarak Jauh</h2>
+        <p>Klik tombol di bawah untuk menyalakan/mematikan LED di Wokwi</p>
+        <button class="btn-on" onclick="sendControl('ON')">Nyalakan LED</button>
+        <button class="btn-off" onclick="sendControl('OFF')">Matikan LED</button>
+        <div id="status">Status: Menghubungkan ke MQTT...</div>
+    </div>
+
+    <script>
+        // Konfigurasi MQTT Broker
+        const broker = "broker.emqx.io";
+        const port = 8084; // Port WSS (Wajib 8084 untuk GitHub Pages yang pakai HTTPS)
+        const topic = "proyek/esp32/led_kontrol_123"; // Harus sama persis dengan di ESP32
+        const clientId = "WebClient-" + Math.random().toString(16).substr(2, 8);
+
+        // Inisialisasi Client
+        const client = new Paho.MQTT.Client(broker, port, clientId);
+
+        // Opsi koneksi
+        const options = {
+            timeout: 3,
+            useSSL: true, // Wajib true karena GitHub Pages menggunakan HTTPS
+            onSuccess: function() {
+                document.getElementById("status").innerText = "Status: Terhubung ke ESP32!";
+                document.getElementById("status").style.color = "green";
+            },
+            onFailure: function(message) {
+                document.getElementById("status").innerText = "Status: Gagal terhubung!";
+                document.getElementById("status").style.color = "red";
+                console.error("Gagal konek: ", message);
+            }
+        };
+
+        // Jika koneksi terputus
+        client.onConnectionLost = function(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                document.getElementById("status").innerText = "Status: Terputus dari server!";
+                document.getElementById("status").style.color = "red";
+            }
+        };
+
+        // Hubungkan ke Broker
+        client.connect(options);
+
+        // Fungsi saat tombol diklik
+        function sendControl(state) {
+            if (client.isConnected()) {
+                const message = new Paho.MQTT.Message(state);
+                message.destinationName = topic;
+                client.send(message);
+                console.log("Perintah terkirim: " + state);
+            } else {
+                alert("Sabar, masih menghubungkan ke server...");
+            }
+        }
+    </script>
+</body>
+</html>
